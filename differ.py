@@ -1,33 +1,49 @@
 #!/usr/bin/python3.4
 
 import sys
+import contextlib
+
+line_spacing = True
 
 c_eq = '\033[32m'
 c_diff = '\033[36m'
 c_default = '\033[0m'
 c_fail = '\033[31m'
 
-def display_line(line1, line2):
+def display_line(line1, lines):
+	line1 = line1.strip()
 	for i in range(len(line1)):
 		try:
-			if i == len(line1) - 1 and i != len(line2) - 1:
-				print(c_fail + '.' * (len(line2) - len(line1)))
-				continue
-			if line1[i] == line2[i]:
-				print(c_eq + line1[i], end='')
-			else:
+			diff = False
+			for line in lines:
+				line = line.strip()
+				if i == len(line) + 1:
+					print(c_fail + line1[i], end='')
+					continue
+				if line[i] != line1[i]:
+					diff = True
+			if diff == True:
 				print(c_diff + line1[i], end='')
+			else:
+				print(c_eq + line1[i], end='')
 		except IndexError:
-			pass
+			print(c_fail + line1[i], end='')
+	print(c_default)
 
 if __name__ == "__main__":
 
-	if len(sys.argv) != 3:
-		print('Usage: %s file1 file2' %(sys.argv[0]))
+	if len(sys.argv) < 3:
+		print('Usage: %s file1 file2 ... fileX' %(sys.argv[0]))
+		exit()
 
-	with open(sys.argv[1], 'r') as f1, open(sys.argv[2], 'r') as f2:
-		for x in f1:
-			y = f2.readline()
-			display_line(x, y)
-			display_line(y, x)
-
+	with contextlib.ExitStack() as stack:
+		files = [stack.enter_context(open(fname)) for fname in sys.argv[1:]]
+		for l in files[0]:	
+			lines = [x.readline() for x in files[1:]]
+			lines.append(l)
+			for line in lines:
+				tmp=[y for y in lines]
+				tmp.remove(line)
+				display_line(line, tmp)
+			if line_spacing == True:
+				print('')
